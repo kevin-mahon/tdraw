@@ -33,30 +33,15 @@ class Draw(App):
         #get terminal size
         self.drawing = False
         self.past_pixel = None
+        self.past_mouse = None
+        self.brush_size = 1
 
     def screen_to_canvas_coords(self, event):
         """
         Translates mouse event coordinates (screen cells) to 
         canvas coordinates (virtual pixels).
         """
-        if self.past_pixel is None:
-            return event.x, event.y * 2
-        else:
-            last_x, last_y = self.past_pixel
-            #determine if we should draw in between the last pixel y and the current pixel_y
-            pixel_y = event.y * 2
-            pixel_x = event.x
-            if abs(pixel_y - last_y) > 2:
-                #draw in between
-                with (canvas := self.query_one(Canvas)).batch_refresh():
-                    canvas.set_pixel(
-                        pixel_x,
-                        pixel_y - 1 if pixel_y > last_y else pixel_y + 1,
-                        Color(255, 0, 0)
-                    )
-            return pixel_x, pixel_y
-
-         # Each cell is 2 pixels high
+        return event.x, event.y * 2
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -78,45 +63,39 @@ class Draw(App):
                         Color(0, 0, 0),
                     )
 
-    def update_state(self):
-        pass
-
     async def on_button_pressed(self, event: Button.Pressed):
         pass
 
-    async def on_mouse_move(self, event):
-        print(f"Mouse move at {event.x}, {event.y}")
-        if self.drawing:
-            x,y = self.screen_to_canvas_coords(event)
-            if x is not None and y is not None:
-                with (canvas := self.query_one(Canvas)).batch_refresh():
-                    canvas.set_pixel(
-                        x,
-                        y,
-                        Color(255, 0, 0)
-                    )
+    def _draw(self, event):
+        if event.x is None or event.y is None:
+            return
 
-    async def on_mouse_up(self, event):
-        self.drawing = False
-
-    async def on_mouse_down(self, event):
-        self.drawing = True
-        #convert the mouse coordinates to canvas coordinates
         x,y = self.screen_to_canvas_coords(event)
-        self.past_pixel = (x,y)
-        
-        if x is None or y is None:
+        # extra_x, extra_y = self.predictive_brush(event)
+        if x is not None and y is not None:
             with (canvas := self.query_one(Canvas)).batch_refresh():
                 canvas.set_pixel(
                     x,
                     y,
                     Color(255, 0, 0)
                 )
+                # canvas.set_pixel(
+                #     extra_x,
+                #     extra_y,
+                #     Color(255, 0, 0)
+                # )
+        self.past_mouse = (event.x, event.y)
 
-    def on_unmount(self):
-        pass
-        # self.hub_client.close()
+    async def on_mouse_move(self, event):
+        if self.drawing:
+            self._draw(event)
 
+    async def on_mouse_up(self):
+        self.drawing = False
+
+    async def on_mouse_down(self, event):
+        self.drawing = True
+        self._draw(event)
 
 
 def main():
