@@ -36,9 +36,8 @@ class Draw(App):
         #get terminal size
         self.drawing = False
         self.canvas_size = (120, 80)  #width, height in virtual pixels
-        self.past_pixel = None
-        self.past_mouse = None
         self.brush_size = 1
+        self.character_size = [21,16]#width, height in pixels
         self.poll_mouse_thread = threading.Thread(target=self.poll_mouse_position)
         self.poll_mouse_thread.daemon = True
         self.poll_mouse_thread.start()
@@ -52,8 +51,8 @@ class Draw(App):
             if self.drawing:
                 mouse_pos = position()
                 #find relative position to self.first_pixel
-                rel_x = mouse_pos.x - self.first_pixel["actual_coords"].x
-                rel_y = mouse_pos.y - self.first_pixel["actual_coords"].y
+                rel_x = (mouse_pos.x - self.first_pixel["actual_coords"].x)/self.character_size[0]
+                rel_y = (mouse_pos.y - self.first_pixel["actual_coords"].y)/self.character_size[1]
                 x,y = self.first_pixel["pixel_coords"]
                 x += rel_x#self.canvas_size[0]
                 y += rel_y#/self.canvas_size[1]
@@ -62,8 +61,11 @@ class Draw(App):
                       Rel pos: {rel_x}, {rel_y} \
                       Drawing at: {x}, {y}")
                 #this relative change in position needs to be translated to terminal character cells
-                self._draw(int(x),int(y))
-            time.sleep(0.1)
+                try:
+                    self._draw(int(x),int(y))
+                except Exception as e:
+                    print(f"Error drawing at {int(x)}, {int(y)}: {e}")
+            time.sleep(0.001)
 
     def screen_to_canvas_coords(self, event):
         """
@@ -118,7 +120,7 @@ class Draw(App):
 
     async def on_mouse_down(self, event):
         self.first_pixel = {
-                "pixel_coords" : (event.x, event.y),
+                "pixel_coords" : (event.x, event.y*2),
                 "actual_coords" : position(),
         }
         self.drawing = True
